@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time Skin Disease Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f9f9f9;
+            padding-top: 40px;
+        }
+        video {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        #prediction {
+            font-size: 24px;
+            color: #333;
+            margin-top: 10px;
+        }
+        .loading {
+            color: orange;
+        }
+        .result {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧠 Real-Time Skin Disease Detection</h1>
+    <video id="video" width="400" autoplay muted playsinline></video>
+    <p id="prediction" class="loading">Loading webcam...</p>
+
+    <script>
+        const video = document.getElementById('video');
+        const predictionDisplay = document.getElementById('prediction');
+
+        // Get webcam access
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                predictionDisplay.textContent = 'Detecting...';
+            })
+            .catch(err => {
+                predictionDisplay.textContent = 'Error accessing webcam';
+                console.error("Webcam error:", err);
+            });
+
+        // Capture frame and send to server
+        function captureAndSendFrame() {
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageDataURL = canvas.toDataURL('image/jpeg');
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageDataURL })
+            })
+            .then(res => res.json())
+            .then(data => {
+                predictionDisplay.textContent = `Prediction: ${data.prediction}`;
+                predictionDisplay.className = 'result';
+            })
+            .catch(err => {
+                predictionDisplay.textContent = 'Error during prediction';
+                console.error("Prediction error:", err);
+            });
+        }
+
+        // Repeat prediction every 2 seconds
+        setInterval(captureAndSendFrame, 2000);
+    </script>
+</body>
+</html>
