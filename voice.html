@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voice-Based Medical Input</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f3f3f3;
+            padding-top: 50px;
+        }
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            margin-top: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #result {
+            font-size: 20px;
+            margin-top: 30px;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎙️ Voice-Based Symptom Detector</h1>
+    <p>Click the button and describe your symptoms.</p>
+    <button onclick="startListening()">Start Speaking</button>
+
+    <p id="transcript"></p>
+    <div id="result"></div>
+
+    <script>
+        function startListening() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                document.getElementById('transcript').textContent = "Listening...";
+            };
+
+            recognition.onresult = event => {
+                const speechText = event.results[0][0].transcript;
+                document.getElementById('transcript').textContent = `You said: "${speechText}"`;
+
+                // Send to backend for processing
+                fetch('/predict_voice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: speechText })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('result').textContent = `Prediction: ${data.prediction}`;
+                })
+                .catch(err => {
+                    document.getElementById('result').textContent = "Error predicting from voice.";
+                    console.error(err);
+                });
+            };
+
+            recognition.onerror = event => {
+                document.getElementById('transcript').textContent = "Error: " + event.error;
+            };
+
+            recognition.start();
+        }
+    </script>
+</body>
+</html>
+
+
+<h2>Voice Input</h2>
+<form method="POST">
+    <button type="submit">Start Voice Input</button>
+</form>
+{% if text %}
+    <h3>You said: "{{ text }}"</h3>
+    <h3>Prediction: {{ prediction }}</h3>
+{% endif %}
+<a href="/">← Back</a>
